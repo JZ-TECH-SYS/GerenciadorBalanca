@@ -1,0 +1,53 @@
+{
+  "name": "balanca",
+  "version": "2.1.0",
+  "description": "gerenciador para banlanca uraano UDC-CO 30/5",
+  "main": "main.js",
+  "license": "ISC",
+  "author": "joaosn",
+  "scripts": {
+    "start": "electron .",
+    "dev": "nodemon --exec electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:all": "npm-run-all -p dist:*",
+    "dist:mac": "electron-builder --mac",
+    "dist:windows": "electron-builder --windows",
+    "dist:linux": "electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^21.0.15",
+    "electron-rebuild": "^3.2.9",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^13.2.0",
+    "eslint-plugin-import": "^2.18.0",
+    "nodemon": "^1.19.1"
+  },
+  "dependencies": {
+    "@serialport/bindings": "^9.2.9",
+    "axios": "^1.5.1",
+    "electron-store": "^8.1.0",
+    "node-thermal-printer": "^4.2.1",
+    "printer": "^0.4.0",
+    "ref-napi": "^3.0.3",
+    "serialport": "^9.2.8"
+  },
+  "build": {
+    "appId": "com.joaosn.urano",
+    "productName": "jv-balance",
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "category": "Utility",
+      "icon": "icon.png",
+      "target": [
+        "deb",
+        "snap",
+        "rpm"
+      ]
+    }
+  }
+}

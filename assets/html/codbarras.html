@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Impressão Codico Barras</title>
+    <link rel="stylesheet" href="./../css/bootstrap5.0.2.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col text-center mt-3">
+                <h1>Codicos de barras</h1>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col text-center">
+                <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar por nome ou cód. de barras" oninput="filterProducts()">
+            </div>
+        </div>        
+        <div id="products-list" class="row m-3">
+            <!-- Produtos serão inseridos aqui via JavaScript -->
+        </div>
+        <script src="./../js/bootstrap5.0.2.js"></script>
+        <script>
+            
+            function selecionado(event, cod_barras) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                let cards = document.querySelectorAll('.card');
+                cards.forEach(card => card.classList.remove('bg-primary'));
+
+                let idx = document.getElementById('idx' + cod_barras);
+                let idxinput = +document.getElementById('idxinput' + cod_barras).value;
+                if(idxinput == '') {
+                    idxinput = 1;
+                }
+                idx.classList.toggle('bg-primary');
+                for (let i = 0; i < idxinput; i++) {
+                    window.api.send("print-direto", { cod_barras:cod_barras });
+                }
+                
+            }
+
+            function displayProducts(produtos) {
+                const productsList = document.getElementById('products-list');
+                productsList.innerHTML = '';  // Limpa a lista de produtos existentes
+                produtos.forEach(produto => {
+                    const productCard = `
+                        <div class="col-md-4">
+                            <div class="card" id="idx${produto.cod_barras}">
+                                <div class="card-body">
+                                    <button class="btn btn-danger" onclick="selecionado(event, ${produto.cod_barras})">Imprimir</button> 
+                                    <p class="card-title m-0 p-0 fw-bold fs-4">${capitalize(produto.nome)}</p>
+                                    <p class="card-text m-0 p-0">${produto.cod_barras}</p>
+                                    <p class="card-text m-0 p-0">${produto.preco}</p>
+                                    <input type="text" id="idxinput${produto.cod_barras}" class="form-control" placeholder="qts Impressão">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    productsList.innerHTML += productCard;
+                });
+            }
+
+            async function filterProducts() {
+                const searchText = document.getElementById('searchInput').value.toLowerCase();
+                const produtos = await loadProducts();
+                const filteredProducts = produtos.filter(produto => {
+                    return (produto.nome && produto.nome.toLowerCase().includes(searchText)) || 
+                        (produto.cod_barras && produto.cod_barras.includes(searchText));
+                });
+                displayProducts(filteredProducts);
+            }
+
+            function capitalize(str) {
+                if (!str || typeof str !== 'string') {
+                    return '';
+                }
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            async function loadProducts() {
+                const api =  window.api.getStore('api');
+                const response = await fetch(api);
+                const data = await response.json();
+                return data.result ?? [];
+            }
+
+            // Chamar loadProducts quando a página carrega
+            window.onload = async () => {
+                const produtos = await loadProducts();
+                displayProducts(produtos);
+            }
+        </script>
+        
+</body>
+
+</html>
