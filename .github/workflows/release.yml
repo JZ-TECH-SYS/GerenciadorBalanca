@@ -12,6 +12,8 @@ jobs:
   release:
     runs-on: windows-latest
     if: github.actor != 'github-actions[bot]'
+    env:
+      NPM_CONFIG_LEGACY_PEER_DEPS: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
