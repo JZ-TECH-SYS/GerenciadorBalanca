@@ -1247,7 +1247,7 @@
                 elements.btnPrint.disabled = true;
                 elements.printHint.textContent = '🖨️ Imprimindo...';
                 
-                await window.electronAPI.printEtiqueta(pesoAtual, produtoSelecionado);
+                await window.electronAPI.printEtiqueta({ peso: pesoAtual, produto: produtoSelecionado });
                 
                 showToast('Sucesso', 'Etiqueta impressa com sucesso!', 'success');
                 elements.printHint.textContent = '✅ Etiqueta impressa com sucesso!';
@@ -1406,7 +1406,7 @@
             // Só imprime etiqueta (enviar para comanda é ação manual via botão)
             try {
                 elements.printHint.textContent = '🖨️ Imprimindo...';
-                await window.electronAPI.printEtiqueta(pesoGramas, produtoSelecionado);
+                await window.electronAPI.printEtiqueta({ peso: pesoGramas, produto: produtoSelecionado });
                 showToast('Sucesso', 'Etiqueta impressa!', 'success');
                 elements.printHint.textContent = '✅ Etiqueta impressa com sucesso!';
                 
