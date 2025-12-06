@@ -135,7 +135,7 @@ function createSettingsWindow() {
  * Cria o ícone na bandeja do sistema
  */
 function createTray() {
-    mainTray = new Tray(path.join(__dirname, 'assets', 'img', 'balanca.png'));
+    mainTray = new Tray(path.join(__dirname, 'assets', 'img', 'balanca.ico'));
     
     const contextMenu = Menu.buildFromTemplate([
         {

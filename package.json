@@ -59,15 +59,15 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/img/balanca.png",
+      "icon": "assets/img/balanca.ico",
       "publisherName": "JZ-TECH-SYS"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/img/balanca.png",
-      "uninstallerIcon": "assets/img/balanca.png",
-      "installerHeaderIcon": "assets/img/balanca.png"
+      "installerIcon": "assets/img/balanca.ico",
+      "uninstallerIcon": "assets/img/balanca.ico",
+      "installerHeaderIcon": "assets/img/balanca.ico"
     },
     "mac": {
       "category": "public.app-category.developer-tools",
