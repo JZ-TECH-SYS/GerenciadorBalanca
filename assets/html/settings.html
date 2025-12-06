@@ -1,64 +1,258 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Configurações</title>
-    <link rel="stylesheet" href="./../css/bootstrap5.0.2.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+    <title>Configurações - Gerenciador de Balança</title>
+    <link rel="stylesheet" href="../css/bootstrap5.0.2.min.css">
+    <link rel="stylesheet" href="../css/app.css">
 </head>
-<body>
-    <div class="container mt-4">
-        <label for="comPort" class="form-label mt-2">Digite a porta COM(Porta da Balança):</label>
-        <input type="text" class="form-control" id="comPort">
+<body style="background-color: var(--bg-color); overflow: auto; height: auto;">
+    <div class="settings-container">
+        <h1 class="settings-title">
+            <span>⚙️</span>
+            Configurações
+        </h1>
 
-        <label for="zebra" class="form-label mt-2">Digite o nome da Impressora de Etiqueta:</label>
-        <input type="text" class="form-control" id="zebra">
+        <form class="settings-form" id="settingsForm">
+            <!-- Porta COM -->
+            <div class="form-group">
+                <label for="comPort">
+                    <span>🔌</span> Porta COM (Balança)
+                </label>
+                <select class="form-control" id="comPort">
+                    <option value="">Selecione uma porta...</option>
+                </select>
+                <small class="form-text text-muted">Porta serial onde a balança está conectada</small>
+            </div>
 
-        <label for="api" class="form-label mt-2">Digite Link API:</label>
-        <input type="text" class="form-control" id="api">
-    
-        <button class="btn btn-primary mt-2" onclick="saveSettings()">Salvar</button>
+            <!-- Impressora -->
+            <div class="form-group">
+                <label for="zebra">
+                    <span>🖨️</span> Impressora de Etiquetas
+                </label>
+                <select class="form-control" id="zebra">
+                    <option value="">Selecione uma impressora...</option>
+                </select>
+                <small class="form-text text-muted">Impressora Zebra para etiquetas</small>
+            </div>
+
+            <!-- API - Prefixo -->
+            <div class="form-group">
+                <label for="prefixoAPI">
+                    <span>🌐</span> Prefixo da API
+                </label>
+                <input type="url" class="form-control" id="prefixoAPI" placeholder="https://api-clickexpress.jztech.com.br/public/">
+                <small class="form-text text-muted">URL base da API (ex: https://api.exemplo.com/public/)</small>
+            </div>
+
+            <!-- ID Empresa -->
+            <div class="form-group">
+                <label for="idEmpresa">
+                    <span>🏢</span> ID da Empresa
+                </label>
+                <input type="text" class="form-control" id="idEmpresa" placeholder="123">
+                <small class="form-text text-muted">Identificador da empresa na API</small>
+            </div>
+
+            <!-- Token -->
+            <div class="form-group">
+                <label for="token">
+                    <span>🔑</span> Token de Autenticação
+                </label>
+                <input type="text" class="form-control" id="token" placeholder="seu-token-aqui">
+                <small class="form-text text-muted">Token fixo para autenticação na API (Authorization Bearer)</small>
+            </div>
+
+            <!-- Botões -->
+            <div class="form-group mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    💾 Salvar Configurações
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="btnCancel">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+
+        <!-- Status -->
+        <div class="mt-4 p-3 bg-light rounded" id="statusArea" style="display: none;">
+            <small class="text-muted" id="statusText"></small>
+        </div>
     </div>
-    
-    <script src="./../js/bootstrap5.0.2.js"></script>
+
+    <script src="../js/bootstrap5.0.2.js"></script>
     <script>
-        
-        if (window.api.getStore('porta_balanca')) {
-            document.getElementById('comPort').value = window.api.getStore('porta_balanca');
+        // Elementos DOM
+        const comPortSelect = document.getElementById('comPort');
+        const zebraSelect = document.getElementById('zebra');
+        const prefixoAPIInput = document.getElementById('prefixoAPI');
+        const idEmpresaInput = document.getElementById('idEmpresa');
+        const tokenInput = document.getElementById('token');
+        const settingsForm = document.getElementById('settingsForm');
+        const btnCancel = document.getElementById('btnCancel');
+        const statusArea = document.getElementById('statusArea');
+        const statusText = document.getElementById('statusText');
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPortas();
+            await loadPrinters();
+            await loadCurrentSettings();
+        });
+
+        // Carrega portas COM disponíveis
+        async function loadPortas() {
+            try {
+                const portas = await window.electronAPI.getPortas();
+                
+                if (portas && portas.length > 0) {
+                    portas.forEach(porta => {
+                        const option = document.createElement('option');
+                        option.value = porta.path;
+                        option.textContent = `${porta.path} - ${porta.manufacturer}`;
+                        comPortSelect.appendChild(option);
+                    });
+                } else {
+                    // Adiciona opções manuais se não encontrar portas
+                    for (let i = 1; i <= 10; i++) {
+                        const option = document.createElement('option');
+                        option.value = `COM${i}`;
+                        option.textContent = `COM${i}`;
+                        comPortSelect.appendChild(option);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar portas:', error);
+                showStatus('Erro ao carregar portas COM', 'error');
+            }
         }
 
-        if (window.api.getStore('zebra')) {
-            document.getElementById('zebra').value = window.api.getStore('zebra');
+        // Carrega impressoras disponíveis
+        async function loadPrinters() {
+            try {
+                const printers = await window.electronAPI.getPrinters();
+                
+                if (printers && printers.length > 0) {
+                    printers.forEach(printer => {
+                        const option = document.createElement('option');
+                        option.value = printer.name;
+                        option.textContent = printer.name;
+                        zebraSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar impressoras:', error);
+            }
         }
 
-        if (window.api.getStore('api')) {
-            document.getElementById('api').value = window.api.getStore('api');
+        // Carrega configurações atuais
+        async function loadCurrentSettings() {
+            try {
+                const settings = await window.electronAPI.getSettings();
+                console.log('Configurações carregadas:', settings);
+                
+                // Porta COM
+                if (settings.comPort) {
+                    // Se não existe na lista, adiciona primeiro
+                    let optionExists = Array.from(comPortSelect.options).some(opt => opt.value === settings.comPort);
+                    if (!optionExists) {
+                        const option = document.createElement('option');
+                        option.value = settings.comPort;
+                        option.textContent = settings.comPort;
+                        comPortSelect.appendChild(option);
+                    }
+                    comPortSelect.value = settings.comPort;
+                }
+                
+                // Impressora
+                if (settings.zebra) {
+                    // Se não existe na lista, adiciona primeiro
+                    let optionExists = Array.from(zebraSelect.options).some(opt => opt.value === settings.zebra);
+                    if (!optionExists) {
+                        const option = document.createElement('option');
+                        option.value = settings.zebra;
+                        option.textContent = settings.zebra;
+                        zebraSelect.appendChild(option);
+                    }
+                    zebraSelect.value = settings.zebra;
+                }
+                
+                // Campos de texto - preenchimento direto
+                prefixoAPIInput.value = settings.prefixoAPI || '';
+                idEmpresaInput.value = settings.idEmpresa || '';
+                tokenInput.value = settings.token || '';
+                
+                console.log('Campos preenchidos - prefixoAPI:', prefixoAPIInput.value, 'idEmpresa:', idEmpresaInput.value, 'token:', tokenInput.value ? '***' : '(vazio)');
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+            }
         }
-       
+
+        // Valida porta COM
         function validateCOMPort(port) {
-            console.log(port);
-            // A expressão regular verifica se a string começa com "COM" seguido de um ou mais dígitos.
-            return /^COM\d+$/.test(port);
+            return /^COM\d+$/i.test(port);
         }
 
-        function validateValue(value) {
-            // Tentamos converter o valor para um float. 
-            // Se for NaN, então o valor inserido não é um número válido.
-            return !isNaN(parseFloat(value));
+        // Exibe status
+        function showStatus(message, type = 'info') {
+            statusArea.style.display = 'block';
+            statusText.textContent = message;
+            statusArea.className = `mt-4 p-3 rounded ${type === 'error' ? 'bg-danger text-white' : 'bg-success text-white'}`;
         }
 
-        function saveSettings() {
-            const comPort = document.getElementById('comPort').value;
-            const zebra = document.getElementById('zebra').value;
-            const api = document.getElementById('api').value;
-            
-            if (!validateCOMPort(comPort)) {
-                alert('Por favor, insira uma porta COM válida (ex: COM1, COM2, ...)');
+        // Salva configurações
+        settingsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const comPort = comPortSelect.value;
+            const zebra = zebraSelect.value;
+            const prefixoAPI = prefixoAPIInput.value.trim();
+            const idEmpresa = idEmpresaInput.value.trim();
+            const token = tokenInput.value.trim();
+
+            // Validação
+            if (!comPort) {
+                showStatus('Selecione uma porta COM', 'error');
                 return;
             }
 
-            window.api.send("settings-saved", { comPort, zebra , api });
-            alert('Salvo com sucesso!');
-            window.close(); 
-        }
+            if (!validateCOMPort(comPort)) {
+                showStatus('Porta COM inválida (ex: COM1, COM2)', 'error');
+                return;
+            }
+            
+            if (!prefixoAPI) {
+                showStatus('Informe o prefixo da API', 'error');
+                return;
+            }
+            
+            if (!idEmpresa) {
+                showStatus('Informe o ID da empresa', 'error');
+                return;
+            }
+            
+            if (!token) {
+                showStatus('Informe o token de autenticação', 'error');
+                return;
+            }
+
+            // Salva
+            window.electronAPI.saveSettings({ comPort, zebra, prefixoAPI, idEmpresa, token });
+            
+            showStatus('Configurações salvas com sucesso!', 'success');
+            
+            // Fecha após 1 segundo
+            setTimeout(() => {
+                window.electronAPI.closeWindow();
+            }, 1000);
+        });
+
+        // Botão cancelar
+        btnCancel.addEventListener('click', () => {
+            window.electronAPI.closeWindow();
+        });
     </script>
 </body>
 </html>

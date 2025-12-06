@@ -1,275 +1,466 @@
-const { app, screen ,Menu, Tray, BrowserWindow, Notification } = require('electron');
-const { ipcMain } = require('electron');
-const { printToLabelPrinter } = require('./src/print.js');
-const { printDireto } = require('./src/printCodbarras.js');
-const { findProduto } = require('./src/help.js');
+/**
+ * main.js
+ * Processo principal do Electron - GerenciadorBalanca v2.1.0
+ * 
+ * Funcionalidades:
+ * - Single instance lock (impede múltiplas instâncias)
+ * - Comunicação com balança via BalancaService (polling ativo)
+ * - Impressão de etiquetas via PrinterService
+ * - Janela principal unificada (produtos + peso)
+ * - System tray com menu de contexto
+ */
 
+const { app, BrowserWindow, Menu, Tray, Notification, ipcMain } = require('electron');
 const path = require('path');
-const fs = require('fs');
-const SerialPort = require('serialport');
 const Store = require('electron-store');
+
+// Serviços
+const balancaService = require('./src/services/BalancaService');
+const printerService = require('./src/services/PrinterService');
+const ApiService = require('./src/services/ApiService');
+
+// Store para persistência de configurações
 const store = new Store();
 
-let settingsWindow;
-let productsWindow;
-let pesoWindow;
-let mainTray;
-let porta_balanca = store.get('porta_balanca') ?? '';
-let api = store.get('api') ?? '';
+// ==========================================
+// VARIÁVEIS GLOBAIS
+// ==========================================
+let mainWindow = null;
+let settingsWindow = null;
+let mainTray = null;
+let produtoSelecionado = null;
 
-function createSettingsWindow() {
-    settingsWindow = new BrowserWindow({
-        width: 500,
-        height: 300,
-        webPreferences: {
-            nodeIntegration: true,
-            preload: path.join(__dirname, 'src', 'preload.js')
+// ==========================================
+// SINGLE INSTANCE LOCK
+// ==========================================
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    // Outra instância já está rodando, fecha esta
+    app.quit();
+} else {
+    // Esta é a instância principal
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Se tentarem abrir outra instância, foca na janela existente
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
         }
-    });
-    settingsWindow.loadFile(path.resolve(__dirname, 'assets', 'html', 'settings.html'));
-
-    settingsWindow.on('close', (event) => {
-        console.log('Evento de fechamento acionado para settingsWindow');
-    });
-    settingsWindow.on('closed', () => {
-        console.log('Evento de janela fechada acionado para settingsWindow');
     });
 }
 
-function createProductsWindow() {
-    productsWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
-        webPreferences: {
-            nodeIntegration: true,
-            preload: path.join(__dirname, 'src', 'preloadProdutos.js')
-        }
-    });
-    productsWindow.loadFile(path.resolve(__dirname, 'assets', 'html', 'products.html'));
+// ==========================================
+// CRIAÇÃO DE JANELAS
+// ==========================================
 
-    productsWindow.on('close', (event) => {
-        console.log('Evento de fechamento acionado para productsWindow');
-    });
-    productsWindow.on('closed', () => {
-        console.log('Evento de janela fechada acionado para productsWindow');
-    });
-}
+/**
+ * Cria a janela principal (produtos + peso)
+ */
+function createMainWindow() {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
+        return;
+    }
 
-function createShowPesoWindow() {
-    // Cria a nova janela sem definir as dimensões ainda
-    pesoWindow = new BrowserWindow({
-        width: 300,
-        height: 250,
+    mainWindow = new BrowserWindow({
+        width: 1000,
+        height: 700,
+        minWidth: 800,
+        minHeight: 600,
         webPreferences: {
             contextIsolation: true,
-            nodeIntegration: true,
-            preload: path.join(__dirname, 'src', 'preloadPeso.js')
+            nodeIntegration: false,
+            preload: path.join(__dirname, 'src', 'preload', 'preload.js')
         },
-        frame: true,  // Remova a borda da janela (opcional)
-        resizable: false  // Impede o redimensionamento da janela (opcional)
+        icon: path.join(__dirname, 'assets', 'img', 'balanca.png'),
+        show: false // Mostra apenas quando estiver pronto
     });
 
-    // Carrega o arquivo HTML
-    pesoWindow.loadFile(path.resolve(__dirname, 'assets', 'html', 'peso.html'));
+    mainWindow.loadFile(path.join(__dirname, 'assets', 'html', 'main.html'));
 
-    // Quando o conteúdo da janela estiver carregado, obtemos as dimensões da janela
-    pesoWindow.webContents.on('did-finish-load', () => {
-        // Obtem as dimensões da tela
-        let { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    // Mostra janela quando estiver pronta
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+    });
 
-        // Calcula a posição para a janela aparecer na parte inferior direita da tela
-        let x = width - 300;  // 80 é a largura da janela
-        let y = height - 700;  // 90 é a altura da janela
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
 
-        // Define a posição da janela
-        pesoWindow.setPosition(x, y);
+    // Previne fechamento - minimiza para tray
+    mainWindow.on('close', (event) => {
+        if (!app.isQuitting) {
+            event.preventDefault();
+            mainWindow.hide();
+        }
     });
 }
 
-function createCodbarrasWindow() {
-    productsWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+/**
+ * Cria a janela de configurações
+ */
+function createSettingsWindow() {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.focus();
+        return;
+    }
+
+    settingsWindow = new BrowserWindow({
+        width: 500,
+        height: 450,
+        resizable: false,
+        parent: mainWindow,
+        modal: true,
         webPreferences: {
-            nodeIntegration: true,
-            preload: path.join(__dirname, 'src', 'preloadcod.js')
-        }
+            contextIsolation: true,
+            nodeIntegration: false,
+            preload: path.join(__dirname, 'src', 'preload', 'preload.js')
+        },
+        icon: path.join(__dirname, 'assets', 'img', 'balanca.png')
     });
-    productsWindow.loadFile(path.resolve(__dirname, 'assets', 'html', 'codbarras.html'));
 
-    productsWindow.on('close', (event) => {
-        console.log('Evento de fechamento acionado para productsWindow');
-    });
-    productsWindow.on('closed', () => {
-        console.log('Evento de janela fechada acionado para productsWindow');
+    settingsWindow.loadFile(path.join(__dirname, 'assets', 'html', 'settings.html'));
+    settingsWindow.setMenuBarVisibility(false);
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
     });
 }
 
-function relaodMonitoramentoBalaca() {
-    const porta_balanca = store.get('porta_balanca', '');
-    if(!porta_balanca){
-        new Notification({
-            title: 'Atenção',
-            body: 'Porta da balança não configurada!'
-        }).show();
-        return;
-    }
-    monitorporta_balanca(porta_balanca);
-}
+// ==========================================
+// SYSTEM TRAY
+// ==========================================
 
-
-function monitorporta_balanca(portName) {
-   
-    if (portName === '') {
-        new Notification({
-            title: 'Atenção',
-            body: `Nenhuma porta COM configurada.!!`
-        }).show();
-        return;
-    }
-
-    let currentPort = new SerialPort(portName, {
-        baudRate: 9600,
-        dataBits: 8,
-        parity: 'none',
-        stopBits: 2
-    });
+/**
+ * Cria o ícone na bandeja do sistema
+ */
+function createTray() {
+    mainTray = new Tray(path.join(__dirname, 'assets', 'img', 'balanca.png'));
     
-    let accumulatedData = "";
-    currentPort.on('data', (data) => {
-        const strData = data.toString().trim();
-        accumulatedData += strData;
-        if (accumulatedData.includes("g")) {
-            const weightMatch = accumulatedData.match(/PESO:\s*(\d+g)/);
-            if (weightMatch) {
-                const weight = weightMatch[1];
-                const peso = +weight.replace('g', '');
-                let zebra = store.get('zebra', '');    // Obtendo o valor de 'zebra' diretamente do store
-                let codbarra = store.get('codbarra', '');  // Obtendo o valor de 'codbarra' diretamente do store
-                let print = store.get('print', true);  // Obtendo o valor de 'print' diretamente do store
-               
-                if(print){
-                    printToLabelPrinter(peso, zebra, codbarra)
-                }else{
-                    findProduto(codbarra).then(produto => {
-                        let nomeProduto = produto.nome ?? 'sem produto';
-                        let valorProduto = produto.preco ?? 0.0;
-                        if (pesoWindow && !pesoWindow.isDestroyed()) {
-                            console.log( { nome: nomeProduto , peso , valor:valorProduto });
-                            pesoWindow.webContents.send('update-peso', { nome: nomeProduto , peso , valor:valorProduto });
-                        } else {
-                            console.error('pesoWindow is not available');
-                        }
-                    });  
-                }  
-            }
-            accumulatedData = "";
-        }
-    });
-
-    currentPort.close((err) => {
-        if (err) {
-            console.error('Erro ao fechar a porta serial:', err.message);
-        } else {
-            console.log('Porta serial fechada com sucesso.');
-        }
-    });
-}
-
-ipcMain.on('settings-saved', (event, settings) => {
-    console.log('settings-saved', settings);
-    try {
-        store.set('porta_balanca', settings.comPort);
-        store.set('zebra', settings.zebra);
-        store.set('api', settings.api); 
-        relaodMonitoramentoBalaca();
-    } catch (error) {
-        console.error('Erro ao salvar no store:', error.message);
-    }
-});
-
-ipcMain.on('settings-saved-produto', (event, settings) => {
-    try {
-        const codbarra = store.get('codbarra', '');
-        if (codbarra !== settings.codbarras) {
-            store.set('codbarra', settings.codbarras);
-            relaodMonitoramentoBalaca();
-        }
-    } catch (error) {
-        new Notification({
-            title: 'Erro',
-            body: 'Erro ao salvar no store codbarras:'+ error.message
-        }).show();
-    }
-});
-
-ipcMain.on('settings-saved-Print-or-tosee', (event, settings) => {
-    try {
-        const print = store.get('print', true);
-        if (print !== settings.print) {
-            store.set('print', settings.print);
-            relaodMonitoramentoBalaca();
-        }
-    } catch (error) {
-        console.error('Erro ao salvar no store Print-or-tosee:', error.message);
-        new Notification({
-            title: 'Erro',
-            body: 'Erro ao salvar no store Print-or-tosee:'+ error.message
-        }).show();
-    }
-});
-
-ipcMain.on('print-direto', (event, settings) => {
-    try {
-        let zebra = store.get('zebra', '');    // Obtendo o valor de 'zebra' diretamente do store
-        printDireto(zebra, settings.cod_barras);
-    } catch (error) {
-        console.error('Erro direto:', error.message);
-    }
-});
-
-
-process.on('uncaughtException', (error) => {
-    new Notification({
-        title: 'Erro',
-        body: 'Erro não tratado:'+ error.message
-    }).show();
-
-    console.error('Erro não tratado:', error.message);
-});
-
-
-app.on('ready', () => {
-    mainTray = new Tray(path.resolve(__dirname, 'assets', 'img', 'balanca.png'));
     const contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'Abrir Gerenciador',
+            click: () => {
+                if (mainWindow) {
+                    mainWindow.show();
+                    mainWindow.focus();
+                } else {
+                    createMainWindow();
+                }
+            }
+        },
+        { type: 'separator' },
         {
             label: 'Configurações',
             click: createSettingsWindow
         },
+        { type: 'separator' },
         {
-            label: 'Produtos',
-            click: createProductsWindow
-        },
-        {
-            label: 'Ver Peso',
-            click: createShowPesoWindow
-        },
-        {
-            label: 'gerar cod barras',
-            click: createCodbarrasWindow
-        },
+            label: 'Sair',
+            click: () => {
+                app.isQuitting = true;
+                app.quit();
+            }
+        }
     ]);
-    
+
+    mainTray.setToolTip('Gerenciador de Balança - Terere Station');
     mainTray.setContextMenu(contextMenu);
-    createShowPesoWindow();
-    createProductsWindow();
-    //createCodbarrasWindow();
-    monitorporta_balanca(porta_balanca);
+
+    // Clique duplo abre a janela principal
+    mainTray.on('double-click', () => {
+        if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
+}
+
+// ==========================================
+// BALANÇA - CONEXÃO E EVENTOS
+// ==========================================
+
+/**
+ * Conecta à balança e configura eventos
+ */
+function connectBalanca() {
+    const portaBalanca = store.get('porta_balanca', '');
+    
+    if (!portaBalanca) {
+        showNotification('Atenção', 'Porta da balança não configurada');
+        sendBalancaStatus({ connected: false, port: '' });
+        return;
+    }
+
+    balancaService.connect(portaBalanca)
+        .then(() => {
+            console.log('Balança conectada com sucesso');
+            sendBalancaStatus({ connected: true, port: portaBalanca });
+        })
+        .catch((error) => {
+            console.error('Erro ao conectar balança:', error.message);
+            showNotification('Erro', `Falha ao conectar na porta ${portaBalanca}`);
+            sendBalancaStatus({ connected: false, port: '' });
+        });
+}
+
+/**
+ * Configura listeners de eventos da balança
+ */
+function setupBalancaListeners() {
+    // Evento de peso recebido
+    balancaService.on('peso', (data) => {
+        console.log('Peso recebido:', data.peso, 'g');
+        
+        // Envia para a janela principal
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('peso-update', { peso: data.peso });
+        }
+    });
+
+    // Evento de conexão
+    balancaService.on('connected', (data) => {
+        console.log('Balança conectada:', data.port);
+        sendBalancaStatus({ connected: true, port: data.port });
+        showNotification('Balança', `Conectado na porta ${data.port}`);
+    });
+
+    // Evento de desconexão
+    balancaService.on('disconnected', () => {
+        console.log('Balança desconectada');
+        sendBalancaStatus({ connected: false, port: '' });
+    });
+
+    // Evento de erro
+    balancaService.on('error', (data) => {
+        console.error('Erro na balança:', data.message);
+    });
+
+    // Evento de status do polling
+    balancaService.on('polling-status', (data) => {
+        console.log('Polling status:', data.supported ? 'SUPORTADO' : 'NÃO SUPORTADO');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('polling-status', data);
+        }
+        if (data.supported) {
+            showNotification('Balança', '✅ Modo automático ativado! Peso atualiza sozinho.');
+        } else {
+            showNotification('Balança', '⚠️ Modo manual. Aperte ENVIAR na balança para pesar.');
+        }
+    });
+}
+
+/**
+ * Envia status da balança para as janelas
+ */
+function sendBalancaStatus(status) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('balanca-status', status);
+    }
+}
+
+// ==========================================
+// IPC HANDLERS
+// ==========================================
+
+function setupIpcHandlers() {
+    // ==========================================
+    // BALANÇA
+    // ==========================================
+    
+    ipcMain.handle('get-balanca-status', () => {
+        return balancaService.getStatus();
+    });
+
+    ipcMain.on('request-balanca-status', (event) => {
+        const status = balancaService.getStatus();
+        mainWindow?.webContents.send('balanca-status', status);
+    });
+
+    // ==========================================
+    // PRODUTOS
+    // ==========================================
+
+    ipcMain.handle('get-produtos', async () => {
+        try {
+            return await printerService.getAllProdutos();
+        } catch (error) {
+            console.error('Erro ao buscar produtos:', error.message);
+            return [];
+        }
+    });
+
+    ipcMain.on('select-produto', (event, produto) => {
+        produtoSelecionado = produto;
+        store.set('codbarra', produto?.cod_barras || '');
+        console.log('Produto selecionado:', produto?.nome);
+    });
+
+    ipcMain.handle('get-produto-selecionado', () => {
+        return produtoSelecionado;
+    });
+
+    // ==========================================
+    // IMPRESSÃO
+    // ==========================================
+
+    ipcMain.handle('print-etiqueta', async (event, data) => {
+        const { peso, produto } = data;
+        return await printerService.printEtiquetaComProduto(peso, produto);
+    });
+
+    ipcMain.handle('print-etiqueta-direta', async (event, data) => {
+        const { produto, quantidade } = data;
+        const qtd = parseInt(quantidade) || 1;
+        
+        // Imprimir a quantidade solicitada
+        for (let i = 0; i < qtd; i++) {
+            await printerService.printEtiquetaDireta(produto.cod_barras);
+        }
+        return true;
+    });
+
+    ipcMain.handle('get-printers', () => {
+        return printerService.constructor.listPrinters();
+    });
+
+    // ==========================================
+    // CONFIGURAÇÕES
+    // ==========================================
+
+    ipcMain.on('save-settings', (event, settings) => {
+        console.log('Salvando configurações:', settings);
+        
+        // Salva no store
+        if (settings.comPort) store.set('porta_balanca', settings.comPort);
+        if (settings.zebra) store.set('zebra', settings.zebra);
+        if (settings.prefixoAPI !== undefined) store.set('prefixoAPI', settings.prefixoAPI);
+        if (settings.idEmpresa !== undefined) store.set('idEmpresa', settings.idEmpresa);
+        if (settings.token !== undefined) store.set('token', settings.token);
+
+        // Reconecta balança se porta mudou
+        balancaService.disconnect();
+        setTimeout(() => connectBalanca(), 500);
+
+        // Atualiza impressora
+        printerService.setPrinter(settings.zebra || '');
+
+        showNotification('Sucesso', 'Configurações salvas com sucesso');
+    });
+
+    ipcMain.handle('get-settings', () => {
+        return {
+            comPort: store.get('porta_balanca', ''),
+            zebra: store.get('zebra', ''),
+            prefixoAPI: store.get('prefixoAPI', ''),
+            idEmpresa: store.get('idEmpresa', ''),
+            token: store.get('token', '')
+        };
+    });
+
+    // ==========================================
+    // COMANDAS / MESAS
+    // ==========================================
+
+    ipcMain.handle('get-comandas', async () => {
+        try {
+            return await ApiService.getComandas();
+        } catch (error) {
+            console.error('Erro ao buscar comandas:', error.message);
+            throw error;
+        }
+    });
+
+    ipcMain.handle('add-produto-comanda', async (event, payload) => {
+        try {
+            return await ApiService.addProdutoComanda(payload);
+        } catch (error) {
+            console.error('Erro ao adicionar produto à comanda:', error.message);
+            throw error;
+        }
+    });
+
+    ipcMain.handle('get-portas', async () => {
+        const BalancaServiceClass = require('./src/services/BalancaService').constructor;
+        return await BalancaServiceClass.listPorts();
+    });
+
+    // ==========================================
+    // JANELAS
+    // ==========================================
+
+    ipcMain.on('open-settings', () => {
+        createSettingsWindow();
+    });
+
+    ipcMain.on('close-window', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win) win.close();
+    });
+
+    // ==========================================
+    // NOTIFICAÇÕES
+    // ==========================================
+
+    ipcMain.on('show-notification', (event, data) => {
+        showNotification(data.title, data.body);
+    });
+}
+
+// ==========================================
+// UTILIDADES
+// ==========================================
+
+/**
+ * Exibe notificação do sistema
+ */
+function showNotification(title, body) {
+    new Notification({ title, body }).show();
+}
+
+// ==========================================
+// APP LIFECYCLE
+// ==========================================
+
+app.on('ready', () => {
+    // Configura handlers IPC
+    setupIpcHandlers();
+    
+    // Configura listeners da balança
+    setupBalancaListeners();
+    
+    // Cria tray
+    createTray();
+    
+    // Cria janela principal
+    createMainWindow();
+    
+    // Conecta à balança
+    connectBalanca();
+    
+    // Configura impressora
+    printerService.setPrinter(store.get('zebra', ''));
 });
 
 app.on('window-all-closed', (e) => {
+    // Previne fechamento do app quando todas janelas são fechadas
     e.preventDefault();
 });
 
+app.on('before-quit', () => {
+    app.isQuitting = true;
+    balancaService.disconnect();
+});
 
+app.on('activate', () => {
+    // macOS: recria janela quando clica no dock
+    if (mainWindow === null) {
+        createMainWindow();
+    }
+});
 
+// Tratamento de erros não capturados
+process.on('uncaughtException', (error) => {
+    console.error('Erro não tratado:', error.message);
+    showNotification('Erro', error.message);
+});

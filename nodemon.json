@@ -1,3 +1,4 @@
 {
-    "ignore": ["*.json"]
+    "ignore": ["*.json"],
+    "exec": "node_modules/.bin/electron"
 }

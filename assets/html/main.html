@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+    <title>Gerenciador de Balança</title>
+    <link rel="stylesheet" href="../css/bootstrap5.0.2.min.css">
+    <link rel="stylesheet" href="../css/app.css">
+    <style>
+        /* Estilos específicos para tabs no header */
+        .header-tabs {
+            display: flex;
+            gap: 4px;
+            margin-left: 2rem;
+        }
+        
+        .header-tabs .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .header-tabs .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .header-tabs .nav-link.active {
+            color: var(--primary-color);
+            background: white;
+            font-weight: 600;
+        }
+        
+        .tab-icon {
+            font-size: 1rem;
+        }
+        
+        /* Container do conteúdo das tabs */
+        .tab-content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .tab-pane {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Estilos para modo Etiquetas */
+        .etiquetas-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .etiquetas-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .etiqueta-item {
+            display: flex;
+            align-items: center;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .etiqueta-item:hover {
+            background: rgba(74, 144, 226, 0.1);
+            transform: translateX(4px);
+        }
+        
+        .etiqueta-info {
+            flex: 1;
+        }
+        
+        .etiqueta-nome {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        
+        .etiqueta-codigo {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'Consolas', monospace;
+        }
+        
+        .etiqueta-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quantidade-input {
+            width: 60px;
+            text-align: center;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 6px 8px;
+            font-size: 0.9rem;
+        }
+        
+        .quantidade-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        
+        .btn-print-etiqueta {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-print-etiqueta:hover {
+            background: #219a52;
+            transform: scale(1.02);
+        }
+        
+        /* Painel lateral de instruções para etiquetas */
+        .etiquetas-sidebar {
+            width: 300px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .instruction-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .instruction-number {
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        /* Barra de busca para etiquetas */
+        .etiquetas-search {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+        }
+        
+        .search-input-wrapper input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        
+        .search-input-wrapper input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Status de impressão para etiquetas */
+        .print-status-bar {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .status-text.success {
+            color: var(--success-color);
+        }
+
+        .status-text.error {
+            color: var(--danger-color);
+        }
+
+        /* Header Actions (botões no header do peso) */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-icon-small {
+            width: 28px;
+            height: 28px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-icon-small:hover {
+            border-color: var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .btn-icon-small.active {
+            background: var(--warning-color);
+            border-color: var(--warning-color);
+            color: white;
+        }
+
+        /* Peso + Valor juntos no mesmo display */
+        .weight-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .weight-main {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .weight-total {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, var(--success-color), #1e8449);
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+
+        .weight-total .total-separator {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1rem;
+            display: none;
+        }
+
+        .weight-total .total-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        .weight-total .total-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Peso Manual escondido */
+        .peso-manual-section {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px dashed var(--warning-color);
+        }
+
+        .peso-manual-section input {
+            width: 100px;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .peso-manual-section button {
+            background: var(--warning-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .peso-manual-section button:hover {
+            opacity: 0.9;
+        }
+
+        /* Toggle Imprimir / Ver Peso (legado) */
+        .mode-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+
+        .btn-mode {
+            padding: 10px 20px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-mode:hover {
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        .btn-mode.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Valor Total Display */
+        .valor-total-display {
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--success-color), #1e8449);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .valor-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 4px;
+        }
+
+        .valor-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Animações do Toast */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* ===== NOVO LAYOUT COMPACTO ===== */
+        
+        /* Seção de Ações */
+        .actions-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 1rem;
+        }
+
+        .action-card {
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* Toggle Mini */
+        .mode-toggle-mini {
+            display: flex;
+            gap: 4px;
+        }
+
+        .btn-mode-mini {
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-mode-mini:hover {
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        .btn-mode-mini.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Botões de Ação */
+        .btn-action {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-action.btn-primary {
+            background: linear-gradient(135deg, var(--success-color), #1e8449);
+            color: white;
+        }
+
+        .btn-action.btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-action.btn-secondary {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            margin-top: 8px;
+        }
+
+        .btn-action.btn-secondary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
+        }
+
+        /* Botão Ícone */
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.1);
+        }
+
+        /* Select compacto */
+        .action-card .mesa-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .action-card .mesa-select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        /* Mesa info compacto */
+        .action-card .mesa-info {
+            font-size: 0.75rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-card .mesa-loading {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Print hint compacto */
+        .print-hint {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        /* Responsivo */
+        @media (max-width: 600px) {
+            .actions-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== FIM NOVO LAYOUT ===== */
+
+        /* Select de Mesas/Comandas (legacy - mantido para compatibilidade) */
+        .mesa-select-wrapper {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mesa-select-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .mesa-select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mesa-select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+
+        .mesa-select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .mesa-select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 8px;
+        }
+
+        .mesa-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .mesa-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            margin-top: 6px;
+        }
+
+        .spinner-small {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header com navegação por tabs integrada -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="header-brand">
+                <span class="brand-icon">⚖️</span>
+                <h1 class="brand-title">Gerenciador</h1>
+            </div>
+            <!-- Tabs no header -->
+            <nav class="header-tabs">
+                <button class="nav-link active" data-tab="balanca">
+                    <span class="tab-icon">⚖️</span>
+                    Balança
+                </button>
+                <button class="nav-link" data-tab="etiquetas">
+                    <span class="tab-icon">🏷️</span>
+                    Etiquetas
+                </button>
+            </nav>
+        </div>
+        <div class="header-actions">
+            <button class="btn-header" id="btn-refresh" title="Atualizar produtos">
+                🔄
+            </button>
+            <button class="btn-header" id="btn-settings" title="Configurações">
+                ⚙️
+            </button>
+        </div>
+    </header>
+
+    <!-- Toast Container (Custom) -->
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1100;"></div>
+
+    <!-- Conteúdo das Tabs -->
+    <div class="tab-content-wrapper">
+        <!-- Tab: Balança (Peso + Impressão) -->
+        <div class="tab-pane active" id="tab-balanca">
+            <main class="main-container">
+                <!-- Sidebar de Produtos -->
+                <aside class="products-sidebar">
+                    <div class="sidebar-header">
+                        <input type="text" class="search-input" id="search-balanca" placeholder="Buscar produto...">
+                    </div>
+                    <div class="products-list" id="products-list-balanca">
+                        <div class="loading-state">
+                            <span class="loading-spinner"></span>
+                            <p>Carregando produtos...</p>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Área Principal -->
+                <div class="main-content">
+                    <!-- Painel de Peso + Valor -->
+                    <section class="weight-panel">
+                        <div class="weight-header">
+                            <h2>Peso Atual</h2>
+                            <div class="header-actions">
+                                <button type="button" class="btn-icon-small" id="btn-toggle-manual" title="Peso manual (teste)">⚡</button>
+                                <div class="connection-status" id="connection-status">
+                                    <span class="status-dot disconnected"></span>
+                                    <span class="status-text">Desconectado</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Display Peso + Valor juntos -->
+                        <div class="weight-display">
+                            <div class="weight-main">
+                                <span class="weight-value" id="weight-value">0.000</span>
+                                <span class="weight-unit">kg</span>
+                            </div>
+                            <div class="weight-total" id="valor-total-panel" style="display: none;">
+                                <span class="total-separator">•</span>
+                                <span class="total-label">Total:</span>
+                                <span class="total-value" id="valor-total">R$ 0,00</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Peso Manual (escondido por padrão) -->
+                        <div class="peso-manual-section" id="peso-manual-section" style="display: none;">
+                            <input type="number" id="peso-manual" step="0.001" min="0" max="99" placeholder="Peso (kg)">
+                            <button type="button" id="btn-aplicar-peso">Aplicar</button>
+                        </div>
+                        
+                        <div class="weight-info">
+                            <small id="weight-status">Aguardando conexão com a balança...</small>
+                        </div>
+                    </section>
+
+                    <!-- Produto Selecionado (compacto) -->
+                    <section class="selected-product-panel" id="selected-product-panel" style="display: none;">
+                        <div class="product-details">
+                            <h3 id="selected-product-name">Nenhum produto selecionado</h3>
+                            <div class="product-meta">
+                                <span class="product-code" id="selected-product-code">-</span>
+                                <span class="product-price" id="selected-product-price">-</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Ações: Impressão e Comanda -->
+                    <section class="actions-section">
+                        <!-- Bloco Impressão -->
+                        <div class="action-card">
+                            <div class="action-header">
+                                <span class="action-title">🖨️ Impressão</span>
+                                <div class="mode-toggle-mini">
+                                    <button class="btn-mode-mini active" id="btn-mode-print" title="Imprimir etiqueta">Etiqueta</button>
+                                    <button class="btn-mode-mini" id="btn-mode-peso" title="Ver peso apenas">Ver Peso</button>
+                                </div>
+                            </div>
+                            <button class="btn-action btn-primary" id="btn-print" disabled>
+                                <span id="btn-print-text">Imprimir Etiqueta</span>
+                            </button>
+                        </div>
+
+                        <!-- Bloco Comanda -->
+                        <div class="action-card">
+                            <div class="action-header">
+                                <span class="action-title">🍽️ Mesa/Comanda</span>
+                                <button type="button" class="btn-icon" id="btn-refresh-comandas" title="Atualizar comandas">🔄</button>
+                            </div>
+                            <select class="mesa-select" id="mesa-select">
+                                <option value="">Nenhuma selecionada</option>
+                            </select>
+                            <div class="mesa-loading" id="mesa-loading" style="display: none;">
+                                <span class="spinner-small"></span>
+                                <span>Buscando...</span>
+                            </div>
+                            <button class="btn-action btn-secondary" id="btn-enviar-comanda" disabled style="display: none;">
+                                Enviar para Comanda
+                            </button>
+                            <div class="mesa-info" id="mesa-info" style="display: none;">
+                                <span id="mesa-info-text"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Status/Hint -->
+                    <p class="print-hint" id="print-hint">Selecione um produto e coloque na balança</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- Tab: Etiquetas (Impressão Direta) -->
+        <div class="tab-pane" id="tab-etiquetas">
+            <div class="etiquetas-container">
+                <!-- Lista de Produtos para Etiquetas -->
+                <div class="etiquetas-main">
+                    <div class="etiquetas-search">
+                        <div class="search-input-wrapper">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="search-etiquetas" placeholder="Buscar produto por nome ou código...">
+                        </div>
+                    </div>
+                    <div class="etiquetas-list" id="etiquetas-list">
+                        <div class="loading-state">
+                            <span class="loading-spinner"></span>
+                            <p>Carregando produtos...</p>
+                        </div>
+                    </div>
+                    <div class="print-status-bar">
+                        <span class="status-text" id="etiqueta-status">Pronto para imprimir</span>
+                        <span class="status-text" id="etiqueta-count">0 produtos</span>
+                    </div>
+                </div>
+
+                <!-- Sidebar de Instruções -->
+                <aside class="etiquetas-sidebar">
+                    <h3 class="sidebar-title">📋 Instruções</h3>
+                    
+                    <div class="instruction-item">
+                        <span class="instruction-number">1</span>
+                        <span>Localize o produto na lista usando a busca</span>
+                    </div>
+                    
+                    <div class="instruction-item">
+                        <span class="instruction-number">2</span>
+                        <span>Defina a quantidade de etiquetas a imprimir</span>
+                    </div>
+                    
+                    <div class="instruction-item">
+                        <span class="instruction-number">3</span>
+                        <span>Clique no botão "Imprimir" do produto desejado</span>
+                    </div>
+
+                    <div style="margin-top: auto; padding-top: 2rem;">
+                        <div class="instruction-item" style="background: rgba(74, 144, 226, 0.1); padding: 12px; border-radius: 8px;">
+                            <span style="margin-right: 8px;">💡</span>
+                            <span><strong>Dica:</strong> Este modo imprime etiquetas sem peso, ideal para produtos pré-embalados.</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Estado da Aplicação =====
+        let produtos = [];
+        let produtoSelecionado = null;
+        let pesoAtual = 0;
+        let balancaConectada = false;
+        let modoImprimir = true; // true = Imprimir, false = Ver Peso
+        let comandas = []; // Lista de comandas/mesas
+        let mesaSelecionada = null; // Comanda/mesa selecionada
+
+        // ===== Elementos DOM =====
+        const elements = {
+            // Tab Balança
+            productsList: document.getElementById('products-list-balanca'),
+            searchBalanca: document.getElementById('search-balanca'),
+            weightValue: document.getElementById('weight-value'),
+            weightStatus: document.getElementById('weight-status'),
+            connectionStatus: document.getElementById('connection-status'),
+            selectedPanel: document.getElementById('selected-product-panel'),
+            selectedName: document.getElementById('selected-product-name'),
+            selectedCode: document.getElementById('selected-product-code'),
+            selectedPrice: document.getElementById('selected-product-price'),
+            btnPrint: document.getElementById('btn-print'),
+            btnPrintText: document.getElementById('btn-print-text'),
+            printHint: document.getElementById('print-hint'),
+            
+            // Toggle Modo
+            btnModePrint: document.getElementById('btn-mode-print'),
+            btnModePeso: document.getElementById('btn-mode-peso'),
+            
+            // Valor Total
+            valorTotalPanel: document.getElementById('valor-total-panel'),
+            valorTotal: document.getElementById('valor-total'),
+            
+            // Mesa/Comanda
+            mesaSelect: document.getElementById('mesa-select'),
+            mesaLoading: document.getElementById('mesa-loading'),
+            mesaInfo: document.getElementById('mesa-info'),
+            mesaInfoText: document.getElementById('mesa-info-text'),
+            btnRefreshComandas: document.getElementById('btn-refresh-comandas'),
+            
+            // Peso Manual (teste)
+            pesoManualSection: document.getElementById('peso-manual-section'),
+            pesoManual: document.getElementById('peso-manual'),
+            btnAplicarPeso: document.getElementById('btn-aplicar-peso'),
+            btnToggleManual: document.getElementById('btn-toggle-manual'),
+            
+            // Botão Enviar Comanda
+            btnEnviarComanda: document.getElementById('btn-enviar-comanda'),
+            
+            // Mode Toggle Container (agora é .mode-toggle-mini dentro do action-card)
+            modeToggleMini: document.querySelector('.mode-toggle-mini'),
+            
+            // Tab Etiquetas
+            etiquetasList: document.getElementById('etiquetas-list'),
+            searchEtiquetas: document.getElementById('search-etiquetas'),
+            etiquetaStatus: document.getElementById('etiqueta-status'),
+            etiquetaCount: document.getElementById('etiqueta-count'),
+            
+            // Header
+            btnRefresh: document.getElementById('btn-refresh'),
+            btnSettings: document.getElementById('btn-settings')
+        };
+
+        // ===== Estado de Polling =====
+        let pollingSupported = null; // null = ainda testando, true/false após teste
+
+        // ===== Toggle Modo Imprimir / Ver Peso =====
+        elements.btnModePrint.addEventListener('click', () => {
+            modoImprimir = true;
+            elements.btnModePrint.classList.add('active');
+            elements.btnModePeso.classList.remove('active');
+            elements.btnPrintText.textContent = 'Imprimir Etiqueta';
+            elements.printHint.textContent = pollingSupported 
+                ? 'Selecione um produto - peso atualiza automaticamente'
+                : 'Selecione um produto e aperte ENVIAR na balança';
+            elements.valorTotalPanel.style.display = 'none';
+            // Salvar preferência
+            window.electronAPI.saveSettings({ print: true });
+        });
+
+        elements.btnModePeso.addEventListener('click', () => {
+            modoImprimir = false;
+            elements.btnModePeso.classList.add('active');
+            elements.btnModePrint.classList.remove('active');
+            elements.btnPrintText.textContent = 'Ver Peso';
+            elements.printHint.textContent = pollingSupported
+                ? 'Selecione um produto - peso atualiza automaticamente'
+                : 'Selecione um produto e aperte ENVIAR na balança para ver o peso';
+            // Salvar preferência
+            window.electronAPI.saveSettings({ print: false });
+        });
+
+        // ===== Mesa/Comanda - Buscar ao clicar no botão refresh =====
+        elements.btnRefreshComandas.addEventListener('click', async () => {
+            await buscarComandas();
+        });
+
+        // ===== Mesa/Comanda - Ao selecionar =====
+        elements.mesaSelect.addEventListener('change', () => {
+            const selectedValue = elements.mesaSelect.value;
+            
+            if (selectedValue) {
+                // Encontra a comanda selecionada pelo idpedidovenda
+                mesaSelecionada = comandas.find(c => String(c.idpedidovenda) === selectedValue);
+                elements.mesaInfo.style.display = 'flex';
+                const mesaText = mesaSelecionada?.idmesa ? `Mesa ${mesaSelecionada.idmesa}` : 'Delivery';
+                elements.mesaInfoText.textContent = `Produto será enviado para ${mesaText} - ${mesaSelecionada?.nome || ''}`;
+                
+                // Mostra botão de enviar comanda
+                elements.btnEnviarComanda.style.display = 'flex';
+                atualizarBotaoEnviarComanda();
+            } else {
+                mesaSelecionada = null;
+                elements.mesaInfo.style.display = 'none';
+                
+                // Esconde botão de enviar comanda
+                elements.btnEnviarComanda.style.display = 'none';
+            }
+        });
+
+        // ===== Toggle Peso Manual (escondido/visível) =====
+        elements.btnToggleManual.addEventListener('click', () => {
+            const section = elements.pesoManualSection;
+            const btn = elements.btnToggleManual;
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'flex';
+                btn.classList.add('active');
+            } else {
+                section.style.display = 'none';
+                btn.classList.remove('active');
+            }
+        });
+
+        // ===== Peso Manual (para testes) =====
+        elements.btnAplicarPeso.addEventListener('click', () => {
+            const pesoKg = parseFloat(elements.pesoManual.value) || 0;
+            if (pesoKg <= 0) {
+                showToast('Atenção', 'Digite um peso válido (ex: 0.5)', 'warning');
+                return;
+            }
+            
+            // Converte kg para gramas (sistema interno usa gramas)
+            pesoAtual = pesoKg * 1000;
+            elements.weightValue.textContent = pesoKg.toFixed(3);
+            elements.weightStatus.textContent = `⚡ Peso manual aplicado: ${pesoKg.toFixed(3)} kg`;
+            balancaConectada = true; // Simula conexão para permitir ação
+            
+            showToast('Peso Aplicado', `${pesoKg.toFixed(3)} kg`, 'success');
+            atualizarBotaoImprimir();
+            
+            // Mostrar valor se produto selecionado
+            if (produtoSelecionado) {
+                mostrarValorCalculado(pesoAtual);
+            }
+        });
+
+        // ===== Buscar Comandas da API =====
+        async function buscarComandas() {
+            try {
+                elements.mesaLoading.style.display = 'flex';
+                elements.mesaSelect.disabled = true;
+                
+                comandas = await window.electronAPI.getComandas();
+                
+                // Limpa opções anteriores (mantém a primeira)
+                while (elements.mesaSelect.options.length > 1) {
+                    elements.mesaSelect.remove(1);
+                }
+                
+                // Adiciona as comandas
+                if (comandas && comandas.length > 0) {
+                    comandas.forEach(comanda => {
+                        const option = document.createElement('option');
+                        // Usar idpedidovenda como value (precisamos dele no POST)
+                        option.value = comanda.idpedidovenda;
+                        // Mostrar Mesa + Nome (ex: "Mesa 14 - Venda" ou "Delivery - João")
+                        const mesaText = comanda.idmesa ? `Mesa ${comanda.idmesa}` : 'Delivery';
+                        option.textContent = `${mesaText} - ${comanda.nome || 'Pedido #' + comanda.idpedidovenda}`;
+                        elements.mesaSelect.appendChild(option);
+                    });
+                    showToast('Comandas', `${comandas.length} comanda(s) encontrada(s)`, 'info');
+                } else {
+                    showToast('Comandas', 'Nenhuma comanda aberta no momento', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar comandas:', error);
+                showToast('Erro', `Falha ao buscar comandas: ${error.message}`, 'error');
+            } finally {
+                elements.mesaLoading.style.display = 'none';
+                elements.mesaSelect.disabled = false;
+            }
+        }
+
+        // ===== Navegação por Tabs =====
+        document.querySelectorAll('.nav-link').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active de todas as tabs
+                document.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                
+                // Ativa a tab clicada
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById('tab-' + tabId).classList.add('active');
+            });
+        });
+
+        // ===== Carregar Produtos =====
+        async function carregarProdutos() {
+            try {
+                produtos = await window.electronAPI.getProdutos();
+                
+                // Tab Balança: apenas produtos "a granel" (que precisam ser pesados)
+                const produtosGranel = produtos.filter(p => 
+                    p.nome && p.nome.toLowerCase().includes('granel')
+                );
+                renderizarProdutosBalanca(produtosGranel);
+                
+                // Tab Etiquetas: todos os produtos
+                renderizarProdutosEtiquetas(produtos);
+                elements.etiquetaCount.textContent = `${produtos.length} produtos`;
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                elements.productsList.innerHTML = `
+                    <div class="empty-state">
+                        <p>❌ Erro ao carregar produtos</p>
+                        <small>${error.message}</small>
+                    </div>
+                `;
+                elements.etiquetasList.innerHTML = elements.productsList.innerHTML;
+            }
+        }
+
+        // ===== Renderizar Produtos - Tab Balança =====
+        function renderizarProdutosBalanca(lista) {
+            if (lista.length === 0) {
+                elements.productsList.innerHTML = `
+                    <div class="empty-state">
+                        <p>📦 Nenhum produto encontrado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.productsList.innerHTML = lista.map(produto => `
+                <div class="product-item ${produtoSelecionado?.cod_barras === produto.cod_barras ? 'selected' : ''}" 
+                     data-codigo="${produto.cod_barras}">
+                    <div class="product-name">${produto.nome || 'Sem nome'}</div>
+                    <div class="product-code">${produto.cod_barras}</div>
+                </div>
+            `).join('');
+
+            // Event listeners para seleção
+            elements.productsList.querySelectorAll('.product-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const codigo = item.dataset.codigo;
+                    selecionarProduto(codigo);
+                });
+            });
+        }
+
+        // ===== Renderizar Produtos - Tab Etiquetas =====
+        function renderizarProdutosEtiquetas(lista) {
+            if (lista.length === 0) {
+                elements.etiquetasList.innerHTML = `
+                    <div class="empty-state">
+                        <p>📦 Nenhum produto encontrado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.etiquetasList.innerHTML = lista.map(produto => `
+                <div class="etiqueta-item" data-codigo="${produto.cod_barras}">
+                    <div class="etiqueta-info">
+                        <div class="etiqueta-nome">${produto.nome || 'Sem nome'}</div>
+                        <div class="etiqueta-codigo">${produto.cod_barras}</div>
+                    </div>
+                    <div class="etiqueta-controls">
+                        <input type="number" 
+                               class="quantidade-input" 
+                               id="qty-${produto.cod_barras}" 
+                               value="1" 
+                               min="1" 
+                               max="100"
+                               title="Quantidade de etiquetas">
+                        <button class="btn-print-etiqueta" onclick="imprimirEtiquetaDireta('${produto.cod_barras}')">
+                            🖨️ Imprimir
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ===== Selecionar Produto (Tab Balança) =====
+        function selecionarProduto(codigo) {
+            produtoSelecionado = produtos.find(p => p.cod_barras === codigo);
+            
+            if (produtoSelecionado) {
+                // Atualizar UI
+                elements.selectedPanel.style.display = 'block';
+                elements.selectedName.textContent = produtoSelecionado.nome || 'Sem nome';
+                elements.selectedCode.textContent = `Código: ${produtoSelecionado.cod_barras}`;
+                elements.selectedPrice.textContent = produtoSelecionado.preco ? 
+                    `R$ ${parseFloat(produtoSelecionado.preco).toFixed(2)}/kg` : '';
+                
+                // Marcar como selecionado na lista
+                elements.productsList.querySelectorAll('.product-item').forEach(item => {
+                    item.classList.toggle('selected', item.dataset.codigo === codigo);
+                });
+                
+                atualizarBotaoImprimir();
+            }
+        }
+
+        // ===== Atualizar Botão Imprimir =====
+        function atualizarBotaoImprimir() {
+            const podeImprimir = produtoSelecionado && pesoAtual > 0 && balancaConectada;
+            elements.btnPrint.disabled = !podeImprimir;
+            
+            if (!produtoSelecionado) {
+                elements.printHint.textContent = 'Selecione um produto para imprimir';
+            } else if (!balancaConectada) {
+                elements.printHint.textContent = 'Aguardando conexão com a balança...';
+            } else if (pesoAtual <= 0) {
+                elements.printHint.textContent = 'Coloque o produto na balança';
+            } else {
+                elements.printHint.textContent = `Pronto para imprimir: ${produtoSelecionado.nome}`;
+            }
+            
+            // Atualiza também o botão de enviar comanda
+            atualizarBotaoEnviarComanda();
+        }
+
+        // ===== Atualizar Botão Enviar Comanda =====
+        function atualizarBotaoEnviarComanda() {
+            if (!mesaSelecionada) {
+                elements.btnEnviarComanda.style.display = 'none';
+                return;
+            }
+            
+            const podeEnviar = produtoSelecionado && pesoAtual > 0 && balancaConectada && mesaSelecionada;
+            elements.btnEnviarComanda.disabled = !podeEnviar;
+            elements.btnEnviarComanda.style.display = 'flex';
+        }
+
+        // ===== Imprimir Etiqueta (Tab Balança - com peso) - SÓ IMPRIME =====
+        async function imprimirEtiqueta() {
+            if (!produtoSelecionado || pesoAtual <= 0) return;
+            
+            // Só imprime etiqueta (não envia para comanda)
+            try {
+                elements.btnPrint.disabled = true;
+                elements.printHint.textContent = '🖨️ Imprimindo...';
+                
+                await window.electronAPI.printEtiqueta(pesoAtual, produtoSelecionado);
+                
+                showToast('Sucesso', 'Etiqueta impressa com sucesso!', 'success');
+                elements.printHint.textContent = '✅ Etiqueta impressa com sucesso!';
+                setTimeout(() => atualizarBotaoImprimir(), 2000);
+            } catch (error) {
+                console.error('Erro ao imprimir:', error);
+                showToast('Erro', `Falha ao imprimir: ${error.message}`, 'error');
+                elements.printHint.textContent = `❌ Erro: ${error.message}`;
+                setTimeout(() => atualizarBotaoImprimir(), 3000);
+            } finally {
+                elements.btnPrint.disabled = false;
+            }
+        }
+
+        // ===== Enviar Produto para Comanda =====
+        async function enviarParaComanda() {
+            if (!produtoSelecionado || !mesaSelecionada || pesoAtual <= 0) return;
+            
+            try {
+                elements.btnPrint.disabled = true;
+                elements.printHint.textContent = '📤 Enviando para comanda...';
+                
+                const pesoKg = pesoAtual / 1000;
+                
+                // Payload para a API no formato correto
+                // { idempresa, idpedidovenda, idproduto, quantidade, obs }
+                const payload = {
+                    idempresa: mesaSelecionada.idempresa,
+                    idpedidovenda: mesaSelecionada.idpedidovenda,
+                    idproduto: produtoSelecionado.id || produtoSelecionado.idproduto,
+                    quantidade: pesoKg,
+                    obs: `${produtoSelecionado.nome} - ${pesoKg.toFixed(3)} kg`
+                };
+                
+                console.log('Enviando para comanda:', payload);
+                await window.electronAPI.addProdutoComanda(payload);
+                
+                const mesaText = mesaSelecionada.idmesa ? `Mesa ${mesaSelecionada.idmesa}` : 'Delivery';
+                showToast('Sucesso', `${produtoSelecionado.nome} (${pesoKg.toFixed(3)} kg) enviado para ${mesaText}!`, 'success');
+                elements.printHint.textContent = `✅ Enviado para ${mesaText}!`;
+                
+                // Limpa a seleção de mesa após enviar
+                elements.mesaSelect.value = '';
+                mesaSelecionada = null;
+                elements.mesaInfo.style.display = 'none';
+                elements.btnPrintText.textContent = modoImprimir ? '🖨️ Imprimir Etiqueta' : '👁️ Ver Peso';
+                
+                setTimeout(() => atualizarBotaoImprimir(), 2000);
+            } catch (error) {
+                console.error('Erro ao enviar para comanda:', error);
+                showToast('Erro', `Falha ao enviar: ${error.message}`, 'error');
+                elements.printHint.textContent = `❌ Erro: ${error.message}`;
+                setTimeout(() => atualizarBotaoImprimir(), 3000);
+            } finally {
+                elements.btnPrint.disabled = false;
+            }
+        }
+
+        // ===== Imprimir Etiqueta Direta (Tab Etiquetas - sem peso) =====
+        async function imprimirEtiquetaDireta(codigoBarras) {
+            const produto = produtos.find(p => p.cod_barras === codigoBarras);
+            if (!produto) return;
+            
+            const quantidadeInput = document.getElementById(`qty-${codigoBarras}`);
+            const quantidade = parseInt(quantidadeInput.value) || 1;
+            
+            try {
+                elements.etiquetaStatus.textContent = `Imprimindo ${quantidade} etiqueta(s)...`;
+                elements.etiquetaStatus.className = 'status-text';
+                
+                // Imprimir a quantidade especificada
+                await window.electronAPI.printEtiquetaDireta(produto, quantidade);
+                
+                elements.etiquetaStatus.textContent = `✅ ${quantidade} etiqueta(s) impressa(s) com sucesso!`;
+                elements.etiquetaStatus.className = 'status-text success';
+                
+                setTimeout(() => {
+                    elements.etiquetaStatus.textContent = 'Pronto para imprimir';
+                    elements.etiquetaStatus.className = 'status-text';
+                }, 3000);
+            } catch (error) {
+                console.error('Erro ao imprimir etiqueta direta:', error);
+                elements.etiquetaStatus.textContent = `❌ Erro: ${error.message}`;
+                elements.etiquetaStatus.className = 'status-text error';
+                
+                setTimeout(() => {
+                    elements.etiquetaStatus.textContent = 'Pronto para imprimir';
+                    elements.etiquetaStatus.className = 'status-text';
+                }, 3000);
+            }
+        }
+
+        // ===== Busca de Produtos =====
+        function filtrarProdutosBalanca(termo) {
+            const termoLower = termo.toLowerCase();
+            // Primeiro filtra por "granel", depois pelo termo de busca
+            const produtosGranel = produtos.filter(p => 
+                p.nome && p.nome.toLowerCase().includes('granel')
+            );
+            const filtrados = produtosGranel.filter(p => 
+                (p.nome && p.nome.toLowerCase().includes(termoLower)) ||
+                (p.cod_barras && p.cod_barras.includes(termo))
+            );
+            renderizarProdutosBalanca(filtrados);
+        }
+
+        function filtrarProdutosEtiquetas(termo) {
+            const termoLower = termo.toLowerCase();
+            const filtrados = produtos.filter(p => 
+                (p.nome && p.nome.toLowerCase().includes(termoLower)) ||
+                (p.cod_barras && p.cod_barras.includes(termo))
+            );
+            renderizarProdutosEtiquetas(filtrados);
+        }
+
+        elements.searchBalanca.addEventListener('input', (e) => {
+            filtrarProdutosBalanca(e.target.value);
+        });
+
+        elements.searchEtiquetas.addEventListener('input', (e) => {
+            filtrarProdutosEtiquetas(e.target.value);
+        });
+
+        // ===== Listeners de Peso (via IPC) =====
+        window.electronAPI.onPesoUpdate((data) => {
+            const peso = data.peso; // peso em gramas
+            pesoAtual = peso;
+            const pesoKg = peso / 1000; // Converter gramas para kg
+            elements.weightValue.textContent = pesoKg.toFixed(3);
+            elements.weightStatus.textContent = peso > 0 ? 'Peso recebido!' : 'Balança vazia';
+            
+            // Atualizar valor calculado se tem produto selecionado
+            if (produtoSelecionado && peso > 0) {
+                mostrarValorCalculado(peso);
+            }
+            
+            // Se polling NÃO é suportado (modo manual) e peso > 0
+            // Executa ação automática quando usuário aperta ENVIAR na balança
+            if (!pollingSupported && produtoSelecionado && peso > 0) {
+                if (modoImprimir) {
+                    // Modo Imprimir: imprime automaticamente
+                    imprimirEtiquetaAutomatico(peso);
+                }
+                // Modo Ver Peso: valor já foi mostrado acima
+            }
+            
+            // Se polling É suportado, só atualiza a tela (imprime só no botão)
+            
+            atualizarBotaoImprimir();
+        });
+        
+        // ===== Imprimir Automaticamente quando balança envia peso (SÓ IMPRIME) =====
+        async function imprimirEtiquetaAutomatico(pesoGramas) {
+            if (!produtoSelecionado) return;
+            
+            // Só imprime etiqueta (enviar para comanda é ação manual via botão)
+            try {
+                elements.printHint.textContent = '🖨️ Imprimindo...';
+                await window.electronAPI.printEtiqueta(pesoGramas, produtoSelecionado);
+                showToast('Sucesso', 'Etiqueta impressa!', 'success');
+                elements.printHint.textContent = '✅ Etiqueta impressa com sucesso!';
+                
+                setTimeout(() => {
+                    elements.printHint.textContent = 'Selecione um produto e aperte ENVIAR na balança';
+                }, 3000);
+            } catch (error) {
+                console.error('Erro ao imprimir:', error);
+                showToast('Erro', error.message, 'error');
+                elements.printHint.textContent = `❌ Erro: ${error.message}`;
+            }
+        }
+        
+        // ===== Mostrar Valor Calculado (Modo Ver Peso) =====
+        function mostrarValorCalculado(pesoGramas) {
+            if (!produtoSelecionado) return;
+            
+            const pesoKg = pesoGramas / 1000;
+            const preco = parseFloat(produtoSelecionado.preco) || 0;
+            const valorTotal = pesoKg * preco;
+            
+            // Formatar em BRL (R$ 9,75)
+            const valorFormatado = valorTotal.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+            
+            elements.valorTotalPanel.style.display = 'block';
+            elements.valorTotal.textContent = valorFormatado;
+            elements.printHint.textContent = `${produtoSelecionado.nome} - ${pesoKg.toFixed(3)} kg`;
+        }
+
+        window.electronAPI.onBalancaStatus((status) => {
+            balancaConectada = status.connected;
+            const statusDot = elements.connectionStatus.querySelector('.status-dot');
+            const statusText = elements.connectionStatus.querySelector('.status-text');
+            
+            if (status.connected) {
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'Conectado';
+                elements.weightStatus.textContent = 'Balança conectada - testando polling...';
+            } else {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = 'Desconectado';
+                elements.weightStatus.textContent = status.error || 'Desconectado';
+                pesoAtual = 0;
+                elements.weightValue.textContent = '0.000';
+            }
+            atualizarBotaoImprimir();
+        });
+
+        // ===== Listener de Status do Polling =====
+        window.electronAPI.onPollingStatus((data) => {
+            pollingSupported = data.supported;
+            
+            if (data.supported) {
+                // Polling funciona! Peso atualiza automaticamente
+                elements.weightStatus.textContent = '✅ Modo automático - peso atualiza sozinho';
+                elements.printHint.textContent = 'Selecione um produto e clique em Imprimir quando quiser';
+                elements.btnPrintText.textContent = 'Imprimir Etiqueta';
+                modoImprimir = true;
+            } else {
+                // Polling não funciona, modo manual
+                elements.weightStatus.textContent = '⚠️ Modo manual - aperte ENVIAR na balança';
+                elements.printHint.textContent = modoImprimir 
+                    ? 'Selecione um produto e aperte ENVIAR para imprimir'
+                    : 'Selecione um produto e aperte ENVIAR para ver o peso';
+            }
+        });
+
+        // ===== Função para mostrar Toast (Custom) =====
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            
+            // Definir cores baseado no tipo
+            const colors = {
+                success: { bg: '#27ae60', icon: '✅' },
+                error: { bg: '#e74c3c', icon: '❌' },
+                warning: { bg: '#f39c12', icon: '⚠️' },
+                info: { bg: '#3498db', icon: 'ℹ️' }
+            };
+            
+            const color = colors[type] || colors.info;
+            
+            // Criar elemento do toast
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                background: ${color.bg};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                margin-top: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideIn 0.3s ease;
+                min-width: 280px;
+            `;
+            
+            toast.innerHTML = `
+                <span style="font-size: 1.2rem;">${color.icon}</span>
+                <div>
+                    <strong style="display: block; font-size: 0.9rem;">${title}</strong>
+                    <span style="font-size: 0.85rem; opacity: 0.9;">${message}</span>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Remover após 3 segundos
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ===== Event Listeners =====
+        elements.btnPrint.addEventListener('click', imprimirEtiqueta);
+        
+        // Botão Enviar para Comanda
+        elements.btnEnviarComanda.addEventListener('click', enviarParaComanda);
+        
+        elements.btnRefresh.addEventListener('click', async () => {
+            showToast('Atualizando', 'Carregando produtos...', 'info');
+            await carregarProdutos();
+            showToast('Sucesso', `${produtos.length} produtos carregados!`, 'success');
+        });
+        
+        elements.btnSettings.addEventListener('click', () => {
+            window.electronAPI.openSettings();
+        });
+
+        // ===== Inicialização =====
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarProdutos();
+            
+            // Solicitar status da balança
+            if (window.electronAPI.requestBalancaStatus) {
+                window.electronAPI.requestBalancaStatus();
+            }
+        });
+    </script>
+</body>
+</html>

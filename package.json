@@ -1,24 +1,30 @@
 {
-  "name": "balanca",
-  "version": "2.1.0",
-  "description": "gerenciador para banlanca uraano UDC-CO 30/5",
+  "name": "gerenciador-balanca",
+  "version": "3.0.0",
+  "description": "Gerenciador para balança Urano UDC-CO 30/5 - Leitura de peso via porta serial e impressão de etiquetas",
   "main": "main.js",
   "license": "ISC",
   "author": "joaosn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JZ-TECH-SYS/GerenciadorBalanca.git"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "nodemon --exec electron .",
     "pack": "electron-builder --dir",
+    "build": "electron-builder --windows",
     "dist": "electron-builder",
     "dist:all": "npm-run-all -p dist:*",
     "dist:mac": "electron-builder --mac",
     "dist:windows": "electron-builder --windows",
     "dist:linux": "electron-builder --linux",
+    "bump": "node script/bumpVersion.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
     "electron": "^26.0.0",
-    "electron-builder": "^21.0.15",
+    "electron-builder": "^24.6.4",
     "electron-rebuild": "^3.2.9",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.2.0",
@@ -35,19 +41,51 @@
     "serialport": "^9.2.8"
   },
   "build": {
-    "appId": "com.joaosn.urano",
-    "productName": "jv-balance",
+    "appId": "com.jztech.gerenciador-balanca",
+    "productName": "Gerenciador Balanca",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "assets/**/*",
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/img/balanca.png",
+      "publisherName": "JZ-TECH-SYS"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/img/balanca.png",
+      "uninstallerIcon": "assets/img/balanca.png",
+      "installerHeaderIcon": "assets/img/balanca.png"
+    },
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/img/balanca.png"
     },
     "linux": {
       "category": "Utility",
-      "icon": "icon.png",
+      "icon": "assets/img/balanca.png",
       "target": [
         "deb",
-        "snap",
+        "AppImage",
         "rpm"
       ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "JZ-TECH-SYS",
+      "repo": "GerenciadorBalanca"
     }
   }
 }
