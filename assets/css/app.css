@@ -403,7 +403,7 @@ body {
     flex-direction: row;
     padding: 1.5rem;
     gap: 1.5rem;
-    overflow: hidden; /* Sem scroll na área principal */
+    overflow: hidden; /* No scroll in main area */
 }
 
 .content-left {
