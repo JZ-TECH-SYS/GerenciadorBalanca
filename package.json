@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "dev": "nodemon --exec electron .",
+    "dev": "nodemon --exec \"npx electron .\"",
     "pack": "electron-builder --dir",
     "build": "electron-builder --windows",
     "dist": "electron-builder",
