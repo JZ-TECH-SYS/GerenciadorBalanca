@@ -259,187 +259,10 @@ body {
    PAINEL DE PESO
    ========================================== */
 .weight-panel {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-    gap: 25px;
-}
-
-/* Produto Selecionado */
-.selected-product {
-    text-align: center;
-    min-height: 70px;
-}
-
-.no-product-selected {
-    color: var(--text-light);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.no-product-selected .icon {
-    font-size: 2rem;
-}
-
-.product-selected-info h3 {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-    margin-bottom: 5px;
-}
-
-.product-selected-price {
-    color: var(--accent-color);
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-/* Display de Peso */
-.weight-display {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-    color: white;
-    padding: 30px 60px;
-    border-radius: var(--radius-lg);
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-    min-width: 350px;
-}
-
-.weight-label {
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    opacity: 0.8;
-    margin-bottom: 10px;
-}
-
-.weight-value {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 10px;
-    transition: transform 0.2s ease;
-}
-
-.weight-value.updated {
-    transform: scale(1.05);
-}
-
-.weight-number {
-    font-size: 4rem;
-    font-weight: 700;
-    font-family: 'Consolas', 'Courier New', monospace;
-}
-
-.weight-unit {
-    font-size: 1.5rem;
-    opacity: 0.8;
-}
-
-.weight-grams {
-    font-size: 1rem;
-    opacity: 0.7;
-    margin-top: 8px;
-}
-
-/* Display de Valor */
-.value-display {
-    background: var(--bg-white);
-    padding: 20px 40px;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    min-width: 300px;
-}
-
-.value-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-}
-
-.value-row.total {
-    border-top: 2px solid var(--border-color);
-    margin-top: 8px;
-    padding-top: 15px;
-}
-
-.value-label {
-    color: var(--text-light);
-    font-size: 1rem;
-}
-
-.value-amount {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.value-row.total .value-amount {
-    font-size: 1.5rem;
-    color: var(--accent-color);
-}
-
-/* Seção de Impressão */
-.print-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-print {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px 50px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-    border: none;
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow);
-}
-
-.btn-print:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-print:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.btn-print:disabled {
-    background: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.print-icon {
-    font-size: 1.5rem;
-}
-
-.print-hint {
-    color: var(--text-light);
-    font-size: 0.85rem;
-}
-
-.spinner-small {
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    display: inline-block;
+    gap: 1rem;
+    width: 100%;
 }
 
 /* ==========================================
@@ -577,10 +400,28 @@ body {
 .main-content {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     padding: 1.5rem;
     gap: 1.5rem;
-    overflow-y: auto;
+    overflow: hidden; /* Sem scroll na área principal */
+}
+
+.content-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.content-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 /* ==========================================
@@ -842,6 +683,7 @@ body {
 
     .main-content {
         padding: 1rem;
+        flex-direction: column;
     }
 
     .weight-value {

@@ -743,96 +743,102 @@
                     </div>
                 </aside>
 
-                <!-- Área Principal -->
+                <!-- Área Principal com duas colunas -->
                 <div class="main-content">
-                    <!-- Painel de Peso + Valor -->
-                    <section class="weight-panel">
-                        <div class="weight-header">
-                            <h2>Peso Atual</h2>
-                            <div class="header-actions">
-                                <button type="button" class="btn-icon-small" id="btn-toggle-manual" title="Peso manual (teste)">⚡</button>
-                                <div class="connection-status" id="connection-status">
-                                    <span class="status-dot disconnected"></span>
-                                    <span class="status-text">Desconectado</span>
+                    <!-- Coluna Esquerda: Produto e Ações -->
+                    <div class="content-left">
+                        <!-- Produto Selecionado (compacto) -->
+                        <section class="selected-product-panel" id="selected-product-panel" style="display: none;">
+                            <div class="product-details">
+                                <h3 id="selected-product-name">Nenhum produto selecionado</h3>
+                                <div class="product-meta">
+                                    <span class="product-code" id="selected-product-code">-</span>
+                                    <span class="product-price" id="selected-product-price">-</span>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Display Peso + Valor juntos -->
-                        <div class="weight-display">
-                            <div class="weight-main">
-                                <span class="weight-value" id="weight-value">0.000</span>
-                                <span class="weight-unit">kg</span>
-                            </div>
-                            <div class="weight-total" id="valor-total-panel" style="display: none;">
-                                <span class="total-separator">•</span>
-                                <span class="total-label">Total:</span>
-                                <span class="total-value" id="valor-total">R$ 0,00</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Peso Manual (escondido por padrão) -->
-                        <div class="peso-manual-section" id="peso-manual-section" style="display: none;">
-                            <input type="number" id="peso-manual" step="0.001" min="0" max="99" placeholder="Peso (kg)">
-                            <button type="button" id="btn-aplicar-peso">Aplicar</button>
-                        </div>
-                        
-                        <div class="weight-info">
-                            <small id="weight-status">Aguardando conexão com a balança...</small>
-                        </div>
-                    </section>
+                        </section>
 
-                    <!-- Produto Selecionado (compacto) -->
-                    <section class="selected-product-panel" id="selected-product-panel" style="display: none;">
-                        <div class="product-details">
-                            <h3 id="selected-product-name">Nenhum produto selecionado</h3>
-                            <div class="product-meta">
-                                <span class="product-code" id="selected-product-code">-</span>
-                                <span class="product-price" id="selected-product-price">-</span>
+                        <!-- Ações: Impressão e Comanda -->
+                        <section class="actions-section">
+                            <!-- Bloco Impressão -->
+                            <div class="action-card">
+                                <div class="action-header">
+                                    <span class="action-title">🖨️ Impressão</span>
+                                    <div class="mode-toggle-mini">
+                                        <button class="btn-mode-mini active" id="btn-mode-print" title="Imprimir etiqueta">Etiqueta</button>
+                                        <button class="btn-mode-mini" id="btn-mode-peso" title="Ver peso apenas">Ver Peso</button>
+                                    </div>
+                                </div>
+                                <button class="btn-action btn-primary" id="btn-print" disabled>
+                                    <span id="btn-print-text">Imprimir Etiqueta</span>
+                                </button>
                             </div>
-                        </div>
-                    </section>
 
-                    <!-- Ações: Impressão e Comanda -->
-                    <section class="actions-section">
-                        <!-- Bloco Impressão -->
-                        <div class="action-card">
-                            <div class="action-header">
-                                <span class="action-title">🖨️ Impressão</span>
-                                <div class="mode-toggle-mini">
-                                    <button class="btn-mode-mini active" id="btn-mode-print" title="Imprimir etiqueta">Etiqueta</button>
-                                    <button class="btn-mode-mini" id="btn-mode-peso" title="Ver peso apenas">Ver Peso</button>
+                            <!-- Bloco Comanda -->
+                            <div class="action-card">
+                                <div class="action-header">
+                                    <span class="action-title">🍽️ Mesa/Comanda</span>
+                                    <button type="button" class="btn-icon" id="btn-refresh-comandas" title="Atualizar comandas">🔄</button>
+                                </div>
+                                <select class="mesa-select" id="mesa-select">
+                                    <option value="">Nenhuma selecionada</option>
+                                </select>
+                                <div class="mesa-loading" id="mesa-loading" style="display: none;">
+                                    <span class="spinner-small"></span>
+                                    <span>Buscando...</span>
+                                </div>
+                                <button class="btn-action btn-secondary" id="btn-enviar-comanda" disabled style="display: none;">
+                                    Enviar para Comanda
+                                </button>
+                                <div class="mesa-info" id="mesa-info" style="display: none;">
+                                    <span id="mesa-info-text"></span>
                                 </div>
                             </div>
-                            <button class="btn-action btn-primary" id="btn-print" disabled>
-                                <span id="btn-print-text">Imprimir Etiqueta</span>
-                            </button>
-                        </div>
+                        </section>
 
-                        <!-- Bloco Comanda -->
-                        <div class="action-card">
-                            <div class="action-header">
-                                <span class="action-title">🍽️ Mesa/Comanda</span>
-                                <button type="button" class="btn-icon" id="btn-refresh-comandas" title="Atualizar comandas">🔄</button>
-                            </div>
-                            <select class="mesa-select" id="mesa-select">
-                                <option value="">Nenhuma selecionada</option>
-                            </select>
-                            <div class="mesa-loading" id="mesa-loading" style="display: none;">
-                                <span class="spinner-small"></span>
-                                <span>Buscando...</span>
-                            </div>
-                            <button class="btn-action btn-secondary" id="btn-enviar-comanda" disabled style="display: none;">
-                                Enviar para Comanda
-                            </button>
-                            <div class="mesa-info" id="mesa-info" style="display: none;">
-                                <span id="mesa-info-text"></span>
-                            </div>
-                        </div>
-                    </section>
+                        <!-- Status/Hint -->
+                        <p class="print-hint" id="print-hint">Selecione um produto e coloque na balança</p>
+                    </div>
 
-                    <!-- Status/Hint -->
-                    <p class="print-hint" id="print-hint">Selecione um produto e coloque na balança</p>
+                    <!-- Coluna Direita: Peso e Valor -->
+                    <div class="content-right">
+                        <!-- Painel de Peso + Valor -->
+                        <section class="weight-panel">
+                            <div class="weight-header">
+                                <h2>Peso Atual</h2>
+                                <div class="header-actions">
+                                    <button type="button" class="btn-icon-small" id="btn-toggle-manual" title="Peso manual (teste)">⚡</button>
+                                    <div class="connection-status" id="connection-status">
+                                        <span class="status-dot disconnected"></span>
+                                        <span class="status-text">Desconectado</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Display Peso + Valor juntos -->
+                            <div class="weight-display">
+                                <div class="weight-main">
+                                    <span class="weight-value" id="weight-value">0.000</span>
+                                    <span class="weight-unit">kg</span>
+                                </div>
+                                <div class="weight-total" id="valor-total-panel" style="display: none;">
+                                    <span class="total-separator">•</span>
+                                    <span class="total-label">Total:</span>
+                                    <span class="total-value" id="valor-total">R$ 0,00</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Peso Manual (escondido por padrão) -->
+                            <div class="peso-manual-section" id="peso-manual-section" style="display: none;">
+                                <input type="number" id="peso-manual" step="0.001" min="0" max="99" placeholder="Peso (kg)">
+                                <button type="button" id="btn-aplicar-peso">Aplicar</button>
+                            </div>
+                            
+                            <div class="weight-info">
+                                <small id="weight-status">Aguardando conexão com a balança...</small>
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </main>
         </div>
